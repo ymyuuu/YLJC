@@ -32,7 +32,7 @@ def check_traffic():
     """检查剩余流量信息"""
     print("正在检查流量信息...")
     try:
-        # 使用 curl 方式请求流量信息
+        # 使用请求方式获取流量信息
         response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
         data = response.text
         print("当前剩余流量信息：", data)
@@ -54,12 +54,12 @@ def check_traffic():
 
 def run_script():
     """执行刷取流量的自动化操作"""
-    # 设置 Chrome 无头模式以便在服务器上运行
+    # 设置 Chrome 无头模式以便在服务器上运行，并将浏览器语言设置为中文
     chrome_options = Options()
-    chrome_options.add_argument('--lang=zh-CN')  # 设置语言为中文（简体）
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--lang=zh-CN")
 
     # 启动 Chrome WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
@@ -130,8 +130,8 @@ def run_script():
 # 主流程
 remaining_traffic = check_traffic()
 
-if remaining_traffic is not None and remaining_traffic < 5:
-    print("剩余流量不足 5G，开始执行刷取...")
+if remaining_traffic is not None and remaining_traffic < 58:
+    print("剩余流量不足 5GB，开始执行刷取...")
     if run_script():
         new_remaining_traffic = check_traffic()
         if new_remaining_traffic > 5:
