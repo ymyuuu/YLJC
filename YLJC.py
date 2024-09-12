@@ -69,8 +69,8 @@ def run_script():
         driver.get(login_url)
 
         # 输入账号和密码
-        driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys(username)
-        driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys(password)
+        driver.find_element(By.XPATH, "//input[@placeholder='Email']").send_keys(username)
+        driver.find_element(By.XPATH, "//input[@placeholder='Password']").send_keys(password)
 
         # 点击登录按钮
         driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
