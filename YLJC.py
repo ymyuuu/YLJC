@@ -66,7 +66,7 @@ def place_order_and_checkout(driver):
 def main():
     original_remaining_data, original_data_info = check_remaining_data()
 
-    if original_remaining_data is not None and original_remaining_data < 5:
+    if original_remaining_data is not None and original_remaining_data < 50:
         print("剩余流量不足 5G，开始执行刷取...")
 
         try:
