@@ -4,12 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from webdriver_manager.chrome import ChromeDriverManager
-from fake_useragent import UserAgent
 import time
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 # 从环境变量中获取 API URL 和其他敏感信息
 bark_api_key = os.getenv("BARK_API_KEY")
@@ -35,11 +32,12 @@ def check_traffic():
     """检查剩余流量信息"""
     print("正在检查流量信息...")
     try:
-        # 使用 Loon User-Agent 请求流量信息
+        # 使用 curl 方式请求流量信息
         response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
         data = response.text
+        print("当前剩余流量信息：", data)
         
-        # 提取剩余流量信息
+        # 从返回的文本中提取剩余流量信息
         if "剩余流量" in data:
             start = data.find("剩余流量：") + 5
             end = data.find("GB", start)
@@ -62,39 +60,25 @@ def run_script():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # 使用 fake_useragent 生成随机的 macOS User-Agent
-    ua = UserAgent()
-    user_agent = ua.random
-    while "Macintosh" not in user_agent:
-        user_agent = ua.random
-    chrome_options.add_argument(f"user-agent={user_agent}")
-
     # 启动 Chrome WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    wait = WebDriverWait(driver, 10)
 
     try:
         # 访问登录页面
         driver.get(login_url)
 
-        # 等待用户名输入框加载并输入账号
-        username_field = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@placeholder='邮箱']")))
-        username_field.send_keys(username)
+        # 输入账号和密码
+        driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys(username)
+        driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys(password)
 
-        # 等待密码输入框加载并输入密码
-        password_field = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@placeholder='密码']")))
-        password_field.send_keys(password)
-
-        # 等待并点击登录按钮
-        login_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '登入')]")))
-        login_button.click()
+        # 点击登录按钮
+        driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
 
         # 等待页面加载完成
         time.sleep(5)
 
         # 点击“下单”按钮
-        order_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '下单')]")))
-        order_button.click()
+        driver.find_element(By.XPATH, "//button[contains(., '下单')]").click()
         time.sleep(5)
 
         # 尝试点击“确定”或“确认取消”按钮
@@ -108,8 +92,7 @@ def run_script():
             print("未找到任何按钮，跳过此步骤。")
 
         # 点击“结账”按钮
-        checkout_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '结账')]")))
-        checkout_button.click()
+        driver.find_element(By.XPATH, "//button[contains(., '结账')]").click()
         time.sleep(5)
 
         # 访问新的 URL 进行第二次刷取
@@ -117,8 +100,7 @@ def run_script():
         time.sleep(5)
 
         # 重复刷取步骤
-        order_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '下单')]")))
-        order_button.click()
+        driver.find_element(By.XPATH, "//button[contains(., '下单')]").click()
         time.sleep(5)
 
         # 再次尝试点击“确定”或“确认取消”按钮
@@ -132,13 +114,12 @@ def run_script():
             print("未找到任何按钮，跳过此步骤。")
 
         # 点击“结账”按钮
-        checkout_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., '结账')]")))
-        checkout_button.click()
+        driver.find_element(By.XPATH, "//button[contains(., '结账')]").click()
         time.sleep(5)
 
         print("流量刷取完成，重新检查流量信息...")
         return True
-    except (NoSuchElementException, TimeoutException) as e:
+    except Exception as e:
         print(f"执行刷取操作时出错: {e}")
         send_notification("错误", f"执行刷取操作时出错: {e}")
         return False
@@ -152,7 +133,7 @@ if remaining_traffic is not None and remaining_traffic < 50:
     print("剩余流量不足 5G，开始执行刷取...")
     if run_script():
         new_remaining_traffic = check_traffic()
-        if new_remaining_traffic is not None and new_remaining_traffic > 5:
+        if new_remaining_traffic > 5:
             print(f"刷取成功！原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
             send_notification("刷取成功", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
         else:
