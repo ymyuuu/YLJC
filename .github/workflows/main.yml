@@ -1,4 +1,4 @@
-name: Run YLJC
+name: Run Python Script
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-YLJC:
-    runs-on: macos-latest  # 使用 macOS 环境
+  run-script:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -22,10 +22,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests selenium webdriver-manager fake_useragent
+          pip install requests selenium webdriver-manager
 
       # 使用环境变量传递敏感信息
-      - name: Run YLJC
+      - name: Run the script
         env:
           BARK_API_KEY: ${{ secrets.BARK_API_KEY }}
           TRAFFIC_API_URL: ${{ secrets.TRAFFIC_API_URL }}
@@ -34,4 +34,4 @@ jobs:
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          python YLJC.py
+          python your_script.py
