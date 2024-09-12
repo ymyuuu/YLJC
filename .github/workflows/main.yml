@@ -22,16 +22,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests selenium webdriver-manager fake-useragent
+          pip install requests selenium webdriver-manager fake_useragent
 
+      # 使用环境变量传递敏感信息
       - name: Run YLJC
         env:
-          BARK_API_URL: ${{ secrets.BARK_API_URL }}
+          BARK_API_KEY: ${{ secrets.BARK_API_KEY }}
           TRAFFIC_API_URL: ${{ secrets.TRAFFIC_API_URL }}
           LOGIN_URL: ${{ secrets.LOGIN_URL }}
-          PLAN_8_URL: ${{ secrets.PLAN_8_URL }}
-          PLAN_9_URL: ${{ secrets.PLAN_9_URL }}
-          EMAIL: ${{ secrets.EMAIL }}
+          PLAN_URL: ${{ secrets.PLAN_URL }}
+          USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: |
           python YLJC.py
