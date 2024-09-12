@@ -30,16 +30,25 @@ def check_remaining_data():
 def click_button(driver, xpath):
     try:
         button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, xpath)))
+        print(f"点击按钮成功: {xpath}")
         button.click()
         time.sleep(3)
     except (NoSuchElementException, ElementClickInterceptedException, TimeoutException) as e:
-        print(f"点击按钮失败：{e}")
+        print(f"点击按钮失败，XPath：{xpath}，异常信息：{e}")
+        # 输出页面HTML以便调试
+        print("当前页面HTML内容：")
+        print(driver.page_source)
+        raise
 
 # 函数：执行下单和结账
 def place_order_and_checkout(driver):
-    click_button(driver, "//button[contains(., '下单')]")
-    click_button(driver, "//span[contains(text(), '确定') or contains(text(), '确认取消')]")
-    click_button(driver, "//button[contains(., '结账')]")
+    try:
+        click_button(driver, "//button[contains(., '下单')]")
+        click_button(driver, "//span[contains(text(), '确定') or contains(text(), '确认取消')]")
+        click_button(driver, "//button[contains(., '结账')]")
+    except Exception as e:
+        print(f"执行下单和结账时发生错误: {e}")
+        raise
 
 # 主函数：刷取流量
 def main():
@@ -61,6 +70,7 @@ def main():
             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//input[@placeholder='邮箱']")))
             
             # 登录
+            print("页面加载成功，开始输入登录信息")
             driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys("ymyuuu@qq.com")
             driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys("ymyuuu@qq.com")
             driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
@@ -84,9 +94,9 @@ def main():
 
         # 判断刷取是否成功
         if current_remaining_data is not None and current_remaining_data > 50:
-            print("刷取成功。")
+            print("刷取成功，当前流量已达到 50GB 以上。")
         else:
-            print("刷取未成功。")
+            print("刷取未成功，当前流量未达到 50GB。")
     else:
         print("流量充足，无需刷取。")
 
