@@ -1,7 +1,57 @@
+import os
+import requests
+from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+
+# 从环境变量中获取 API URL 和其他敏感信息
+bark_api_key = os.getenv("BARK_API_KEY")
+traffic_api_url = os.getenv("TRAFFIC_API_URL")
+login_url = os.getenv("LOGIN_URL")
+plan_url = os.getenv("PLAN_URL")
+username = os.getenv("USERNAME")
+password = os.getenv("PASSWORD")
+
+# Bark 推送 API 地址
+bark_api_url = f"https://api.day.app/{bark_api_key}/"
+
+def send_notification(title, content):
+    """发送通知到 Bark 应用"""
+    url = f"{bark_api_url}{title}/{content}"
+    try:
+        requests.get(url)
+        print("通知已发送")
+    except requests.RequestException as e:
+        print(f"发送通知时出错: {e}")
+
+def check_traffic():
+    """检查剩余流量信息"""
+    print("正在检查流量信息...")
+    try:
+        # 使用请求方式获取流量信息
+        response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
+        data = response.text
+        print("当前剩余流量信息：", data)
+        
+        # 从返回的文本中提取剩余流量信息
+        if "剩余流量" in data:
+            start = data.find("剩余流量：") + 5
+            end = data.find("GB", start)
+            remaining_traffic = float(data[start:end].strip())
+            print(f"剩余流量解析成功：{remaining_traffic} GB")
+            return remaining_traffic
+        else:
+            print("无法解析流量信息")
+            send_notification("错误", "无法解析流量信息")
+            return None
+    except Exception as e:
+        print(f"检查流量信息时出错: {e}")
+        send_notification("错误", f"检查流量信息时出错: {e}")
+        return None
 
 def run_script():
     """执行刷取流量的自动化操作"""
@@ -12,81 +62,59 @@ def run_script():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--lang=zh-CN")
 
-    # 启动 Chrome WebDriver
+    print("启动 Chrome 浏览器...")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    
-    # 使用显式等待
-    wait = WebDriverWait(driver, 10)  # 等待最长10秒
+    driver.implicitly_wait(10)
 
     try:
-        print("正在访问登录页面...")
+        # 访问登录页面
+        print(f"访问登录页面：{login_url}")
         driver.get(login_url)
 
         # 输入账号和密码
-        print("正在输入账号...")
-        wait.until(EC.presence_of_element_located((By.XPATH, "//input[@placeholder='Email']"))).send_keys(username)
-        print(f"账号 {username} 已输入")
-
-        print("正在输入密码...")
-        wait.until(EC.presence_of_element_located((By.XPATH, "//input[@placeholder='Password']"))).send_keys(password)
-        print("密码已输入")
+        print("输入账号...")
+        driver.find_element(By.XPATH, "//input[@placeholder='Email']").send_keys(username)
+        print("账号输入成功")
+        
+        print("输入密码...")
+        driver.find_element(By.XPATH, "//input[@placeholder='Password']").send_keys(password)
+        print("密码输入成功")
 
         # 点击登录按钮
-        print("正在点击登录按钮...")
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Login')]"))).click()
-        print("已点击登录按钮，等待页面加载...")
+        print("点击登录按钮...")
+        driver.find_element(By.XPATH, "//button[contains(., 'Login')]").click()
+
+        # 等待页面加载完成
+        time.sleep(5)
+        print("登录成功，等待页面加载完成")
 
         # 点击“下单”按钮
-        print("等待并点击“下单”按钮...")
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Order')]"))).click()
-        print("“下单”按钮已点击")
+        print(f"访问计划页面：{plan_url}")
+        driver.get(plan_url)
+        print("点击“下单”按钮...")
+        driver.find_element(By.XPATH, "//button[contains(., 'Order')]").click()
+        time.sleep(5)
+        print("下单按钮点击成功")
 
         # 尝试点击“确定”或“确认取消”按钮
-        print("尝试查找并点击“确定”或“确认取消”按钮...")
         try:
-            confirm_buttons = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")))
-            for button in confirm_buttons:
-                try:
-                    print(f"尝试点击按钮：{button.text}")
+            print("查找确认按钮...")
+            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")
+            if confirm_buttons:
+                for button in confirm_buttons:
+                    print(f"点击确认按钮：{button.text}")
                     button.click()
-                    time.sleep(3)  # 可以考虑去掉或调整
-                    print(f"已成功点击按钮：{button.text}")
-                except StaleElementReferenceException:
-                    print(f"元素已过期，无法点击：{button.text}")
+                    time.sleep(3)
+            else:
+                print("未找到任何确认按钮，跳过此步骤。")
         except NoSuchElementException:
-            print("未找到任何“确定”或“确认取消”按钮，跳过此步骤。")
+            print("确认按钮查找失败，跳过。")
 
         # 点击“结账”按钮
-        print("等待并点击“结账”按钮...")
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Chectout')]"))).click()
-        print("“结账”按钮已点击")
-
-        # 访问新的 URL 进行第二次刷取
-        print("访问新的 URL 进行第二次刷取...")
-        driver.get(plan_url)
-        print("等待并点击“下单”按钮...")
-        wait.until(EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Order')]"))).click()
-        print("“下单”按钮已点击")
-
-        # 再次尝试点击“确定”或“确认取消”按钮
-        print("再次尝试查找并点击“确定”或“确认取消”按钮...")
-        try:
-            confirm_buttons = wait.until(EC.presence_of_all_elements_located((By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")))
-            for button in confirm_buttons:
-                try:
-                    print(f"尝试点击按钮：{button.text}")
-                    button.click()
-                    time.sleep(3)  # 可以考虑去掉或调整
-                    print(f"已成功点击按钮：{button.text}")
-                except StaleElementReferenceException:
-                    print(f"元素已过期，无法点击：{button.text}")
-        except NoSuchElementException:
-            print("未找到任何“确定”或“确认取消”按钮，跳过此步骤。")
-
-        # 点击“结账”按钮
-        print("等待并点击“结账”按钮...")
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Chectout')]"))).click()
-        print("“结账”按钮已点击")
+        print("点击“结账”按钮...")
+        driver.find_element(By.XPATH, "//button[contains(., 'Checkout')]").click()
+        time.sleep(5)
+        print("结账按钮点击成功")
 
         print("流量刷取完成，重新检查流量信息...")
         return True
@@ -96,3 +124,20 @@ def run_script():
         return False
     finally:
         driver.quit()
+        print("浏览器已关闭")
+
+# 主流程
+remaining_traffic = check_traffic()
+
+if remaining_traffic is not None and remaining_traffic < 58:
+    print(f"剩余流量不足 5GB (当前流量: {remaining_traffic} GB)，开始执行刷取...")
+    if run_script():
+        new_remaining_traffic = check_traffic()
+        if new_remaining_traffic > 5:
+            print(f"刷取成功！原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
+            send_notification("刷取成功", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
+        else:
+            print(f"刷取失败，流量未达到预期值。当前流量: {new_remaining_traffic} GB")
+            send_notification("刷取失败", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
+else:
+    print(f"剩余流量充足: {remaining_traffic} GB，无需刷取。")
