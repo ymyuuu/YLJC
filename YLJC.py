@@ -6,7 +6,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from webdriver_manager.chrome import ChromeDriverManager
-from fake_useragent import UserAgent
 import time
 
 # 从环境变量中获取 API URL 和其他敏感信息
@@ -33,11 +32,12 @@ def check_traffic():
     """检查剩余流量信息"""
     print("正在检查流量信息...")
     try:
-        # 使用 Loon User-Agent 请求流量信息
+        # 使用 curl 方式请求流量信息
         response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
         data = response.text
+        print("当前剩余流量信息：", data)
         
-        # 提取剩余流量信息
+        # 从返回的文本中提取剩余流量信息
         if "剩余流量" in data:
             start = data.find("剩余流量：") + 5
             end = data.find("GB", start)
@@ -60,13 +60,6 @@ def run_script():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # 使用 fake_useragent 生成随机的 macOS User-Agent
-    ua = UserAgent()
-    user_agent = ua.random
-    while "Macintosh" not in user_agent:
-        user_agent = ua.random
-    chrome_options.add_argument(f"user-agent={user_agent}")
-
     # 启动 Chrome WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
@@ -76,6 +69,7 @@ def run_script():
 
          # 等待页面加载完成
         time.sleep(5)
+
 
         # 输入账号和密码
         driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys(username)
@@ -139,11 +133,11 @@ def run_script():
 # 主流程
 remaining_traffic = check_traffic()
 
-if remaining_traffic is not None and remaining_traffic < 50:
+if remaining_traffic is not None and remaining_traffic < 5:
     print("剩余流量不足 5G，开始执行刷取...")
     if run_script():
         new_remaining_traffic = check_traffic()
-        if new_remaining_traffic is not None and new_remaining_traffic > 5:
+        if new_remaining_traffic > 5:
             print(f"刷取成功！原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
             send_notification("刷取成功", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
         else:
