@@ -24,7 +24,6 @@ def send_notification(title, content):
     url = f"{bark_api_url}{title}/{content}"
     try:
         requests.get(url)
-        print("通知已发送")
     except requests.RequestException as e:
         print(f"发送通知时出错: {e}")
 
@@ -93,7 +92,6 @@ def run_script():
         driver.find_element(By.XPATH, "//button[contains(., 'Checkout')]").click()
         time.sleep(5)
 
-        print("流量刷取完成")
         return True
     except Exception as e:
         print(f"执行刷取操作时出错: {e}")
