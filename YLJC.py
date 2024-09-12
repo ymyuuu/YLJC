@@ -124,7 +124,7 @@ def run_script():
 # 主流程
 original_traffic = check_traffic()
 
-if original_traffic is not None and original_traffic < 50:
+if original_traffic is not None and original_traffic < 5:
     print(f"剩余流量不足 5GB，开始执行刷取...")
     if run_script():
         new_traffic = check_traffic()
