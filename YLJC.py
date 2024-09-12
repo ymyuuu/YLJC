@@ -73,18 +73,18 @@ def run_script():
         driver.find_element(By.XPATH, "//input[@placeholder='Password']").send_keys(password)
 
         # 点击登录按钮
-        driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
+        driver.find_element(By.XPATH, "//button[contains(., 'Login')]").click()
 
         # 等待页面加载完成
         time.sleep(5)
 
         # 点击“下单”按钮
-        driver.find_element(By.XPATH, "//button[contains(., '下单')]").click()
+        driver.find_element(By.XPATH, "//button[contains(., 'Order')]").click()
         time.sleep(5)
 
         # 尝试点击“确定”或“确认取消”按钮
         try:
-            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), '确定') or contains(text(), '确认取消')]")
+            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")
             for button in confirm_buttons:
                 button.click()
                 time.sleep(3)
@@ -93,7 +93,7 @@ def run_script():
             print("未找到任何按钮，跳过此步骤。")
 
         # 点击“结账”按钮
-        driver.find_element(By.XPATH, "//button[contains(., '结账')]").click()
+        driver.find_element(By.XPATH, "//button[contains(., 'Chectout')]").click()
         time.sleep(5)
 
         # 访问新的 URL 进行第二次刷取
