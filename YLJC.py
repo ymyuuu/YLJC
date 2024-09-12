@@ -123,7 +123,7 @@ def run_script():
 original_traffic = check_traffic()
 
 if original_traffic is not None and original_traffic < 5:
-    print(f"剩余流量不足 5GB，开始执行刷取...")
+    print(f"剩余流量不足 5GB，开始执行刷取")
     if run_script():
         new_traffic = check_traffic()
         if new_traffic > original_traffic:
@@ -133,4 +133,4 @@ if original_traffic is not None and original_traffic < 5:
             print("刷取失败，流量未达到预期值。")
             send_notification("刷取失败", f"原流量: {original_traffic} GB, 现在流量: {new_traffic} GB")
 else:
-    print(f"剩余流量充足: {original_traffic} GB，无需刷取。")
+    print(f"剩余流量充足: {original_traffic} GB，无需刷取")
