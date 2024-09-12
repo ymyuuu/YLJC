@@ -1,4 +1,4 @@
-name: Run Python Script
+name: Run YLJC
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           pip install requests selenium webdriver-manager
 
       # 使用环境变量传递敏感信息
-      - name: Run the script
+      - name: Run YLJC
         env:
           BARK_API_KEY: ${{ secrets.BARK_API_KEY }}
           TRAFFIC_API_URL: ${{ secrets.TRAFFIC_API_URL }}
@@ -34,4 +34,4 @@ jobs:
           USERNAME: ${{ secrets.USERNAME }}
           PASSWORD: ${{ secrets.PASSWORD }}
         run: |
-          python your_script.py
+          python YLJC.py
