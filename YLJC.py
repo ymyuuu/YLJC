@@ -56,6 +56,7 @@ def run_script():
     """执行刷取流量的自动化操作"""
     # 设置 Chrome 无头模式以便在服务器上运行
     chrome_options = Options()
+    chrome_options.add_argument('--lang=zh-CN')  # 设置语言为中文（简体）
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
