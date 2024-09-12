@@ -40,7 +40,7 @@ def check_traffic():
             user_agent = ua.random
         
         # 发起请求时使用随机生成的 User-Agent
-        headers = {"User-Agent": user_agent}
+        headers = {"User-Agent": Loon}
         response = requests.get(traffic_api_url, headers=headers)
         
         # 输出完整的响应内容
