@@ -38,7 +38,6 @@ def check_traffic():
             start = data.find("剩余流量：") + 5
             end = data.find("GB", start)
             remaining_traffic = float(data[start:end].strip())
-            print(f"剩余流量: {remaining_traffic} GB")
             return remaining_traffic
         else:
             send_notification("错误", "无法解析流量信息")
