@@ -1,22 +1,24 @@
 import os
 import requests
+from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 from webdriver_manager.chrome import ChromeDriverManager
-from fake_useragent import UserAgent  # 用于生成随机的 User-Agent
 import time
 
-# 从环境变量中读取 API 和其他配置
-bark_api_url = os.getenv("BARK_API_URL")
+# 从环境变量中获取 API URL 和其他敏感信息
+bark_api_key = os.getenv("BARK_API_KEY")
 traffic_api_url = os.getenv("TRAFFIC_API_URL")
 login_url = os.getenv("LOGIN_URL")
-plan_8_url = os.getenv("PLAN_8_URL")
-plan_9_url = os.getenv("PLAN_9_URL")
-email = os.getenv("EMAIL")
+plan_url = os.getenv("PLAN_URL")
+username = os.getenv("USERNAME")
 password = os.getenv("PASSWORD")
+
+# Bark 推送 API 地址
+bark_api_url = f"https://api.day.app/{bark_api_key}/"
 
 def send_notification(title, content):
     """发送通知到 Bark 应用"""
@@ -31,8 +33,15 @@ def check_traffic():
     """检查剩余流量信息"""
     print("正在检查流量信息...")
     try:
-        # 使用 curl 方式请求流量信息
-        response = requests.get(traffic_api_url, headers={"User-Agent": user_agent})
+        # 使用 fake_useragent 库生成随机的 macOS User-Agent
+        ua = UserAgent()
+        user_agent = ua.random
+        while "Macintosh" not in user_agent:
+            user_agent = ua.random
+        
+        # 发起请求时使用随机生成的 User-Agent
+        headers = {"User-Agent": user_agent}
+        response = requests.get(traffic_api_url, headers=headers)
         data = response.text
         print("当前剩余流量信息：", data)
         
@@ -53,18 +62,17 @@ def check_traffic():
 
 def run_script():
     """执行刷取流量的自动化操作"""
-
-    # 使用 fake_useragent 随机生成 macOS 的 User-Agent
-    ua = UserAgent()
-    user_agent = ua.random
-    while "Macintosh" not in user_agent:
-        user_agent = ua.random
-
     # 设置 Chrome 无头模式以便在服务器上运行
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+
+    # 使用 fake_useragent 库生成随机的 macOS User-Agent
+    ua = UserAgent()
+    user_agent = ua.random
+    while "Macintosh" not in user_agent:
+        user_agent = ua.random
     chrome_options.add_argument(f"user-agent={user_agent}")
 
     # 启动 Chrome WebDriver
@@ -75,7 +83,7 @@ def run_script():
         driver.get(login_url)
 
         # 输入账号和密码
-        driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys(email)
+        driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys(username)
         driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys(password)
 
         # 点击登录按钮
@@ -103,7 +111,7 @@ def run_script():
         time.sleep(5)
 
         # 访问新的 URL 进行第二次刷取
-        driver.get(plan_9_url)
+        driver.get(plan_url)
         time.sleep(5)
 
         # 重复刷取步骤
