@@ -8,7 +8,7 @@ on:
 
 jobs:
   run-YLJC:
-    runs-on: macos-latest  # 使用 macOS 环境
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
