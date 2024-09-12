@@ -4,7 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 
@@ -24,17 +24,16 @@ def send_notification(title, content):
     url = f"{bark_api_url}{title}/{content}"
     try:
         requests.get(url)
+        print("通知已发送")
     except requests.RequestException as e:
         print(f"发送通知时出错: {e}")
 
 def check_traffic():
     """检查剩余流量信息"""
     try:
-        # 使用请求方式获取流量信息
         response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
         data = response.text
-        
-        # 从返回的文本中提取剩余流量信息
+
         if "剩余流量" in data:
             start = data.find("剩余流量：") + 5
             end = data.find("GB", start)
@@ -49,8 +48,34 @@ def check_traffic():
         send_notification("错误", f"检查流量信息时出错: {e}")
         return None
 
+def perform_order(driver):
+    """执行下单和结账操作"""
+    try:
+        # 点击“下单”按钮
+        driver.find_element(By.XPATH, "//button[contains(., 'Order')]").click()
+        time.sleep(5)
+
+        # 尝试点击“确认”或“确认取消”按钮
+        try:
+            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")
+            for button in confirm_buttons:
+                button.click()
+                time.sleep(3)
+        except NoSuchElementException:
+            pass
+
+        # 点击“结账”按钮
+        driver.find_element(By.XPATH, "//button[contains(., 'Checkout')]").click()
+        time.sleep(5)
+        print("下单及结账操作完成")
+        return True
+    except Exception as e:
+        print(f"执行下单操作时出错: {e}")
+        send_notification("错误", f"执行下单操作时出错: {e}")
+        return False
+
 def run_script():
-    """执行刷取流量的自动化操作"""
+    """执行登录和刷取流量的自动化操作"""
     # 设置 Chrome 无头模式以便在服务器上运行
     chrome_options = Options()
     chrome_options.add_argument("--headless")
@@ -74,24 +99,20 @@ def run_script():
         # 等待页面加载完成
         time.sleep(5)
 
-        # 访问计划页面并点击“下单”按钮
+        # 在登录页面执行首次下单和结账
+        print("在登录页面执行下单操作...")
+        if not perform_order(driver):
+            return False
+
+        # 访问计划页面并重复下单和结账操作
+        print("访问计划页面并执行下单操作...")
         driver.get(plan_url)
-        driver.find_element(By.XPATH, "//button[contains(., 'Order')]").click()
         time.sleep(5)
 
-        # 尝试点击“确认”或“确认取消”按钮
-        try:
-            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")
-            for button in confirm_buttons:
-                button.click()
-                time.sleep(3)
-        except NoSuchElementException:
-            pass
+        if not perform_order(driver):
+            return False
 
-        # 点击“结账”按钮
-        driver.find_element(By.XPATH, "//button[contains(., 'Checkout')]").click()
-        time.sleep(5)
-
+        print("流量刷取完成")
         return True
     except Exception as e:
         print(f"执行刷取操作时出错: {e}")
