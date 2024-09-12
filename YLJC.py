@@ -42,6 +42,10 @@ def check_traffic():
         # 发起请求时使用随机生成的 User-Agent
         headers = {"User-Agent": user_agent}
         response = requests.get(traffic_api_url, headers=headers)
+        
+        # 输出完整的响应内容
+        print("原始响应内容：", response.text)
+        
         data = response.text
         print("当前剩余流量信息：", data)
         
@@ -59,6 +63,7 @@ def check_traffic():
         print(f"检查流量信息时出错: {e}")
         send_notification("错误", f"检查流量信息时出错: {e}")
         return None
+
 
 def run_script():
     """执行刷取流量的自动化操作"""
