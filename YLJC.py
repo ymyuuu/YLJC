@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import requests
@@ -6,7 +7,7 @@ import time
 
 # 函数：发送Bark通知
 def send_bark_notification(title, content):
-    api_url = f"https://api.day.app/Y6wZN8swvDrno2URYa5CDZ/{title}/{content}"
+    api_url = f"https://api.day.app/YOUR_BARK_KEY/{title}/{content}"  # 记得替换成你的 Bark Key
     try:
         response = requests.get(api_url)
         if response.status_code == 200:
@@ -62,11 +63,19 @@ def place_order_and_checkout(driver):
 def main():
     original_remaining_data, original_data_info = check_remaining_data()
 
-    if original_remaining_data is not None and original_remaining_data < 53:
+    if original_remaining_data is not None and original_remaining_data < 50:
         print("剩余流量不足 5G，开始执行刷取...")
 
+        driver = None  # 初始化 driver 为 None
         try:
-            driver = webdriver.Chrome()
+            # 设置 Chrome 无头模式
+            chrome_options = Options()
+            chrome_options.add_argument('--headless')  # 无头模式
+            chrome_options.add_argument('--no-sandbox')  # 防止在沙箱中运行导致的错误
+            chrome_options.add_argument('--disable-dev-shm-usage')  # 共享内存问题
+            chrome_options.add_argument('--disable-gpu')  # 禁用 GPU，减少资源消耗
+
+            driver = webdriver.Chrome(options=chrome_options)
             driver.get("https://xn--l6qx3lcvp58x.com/#/login?redirect=/plan/8")
 
             # 登录，直接在代码中写入邮箱和密码
@@ -88,7 +97,9 @@ def main():
             print(error_message)
             send_bark_notification("刷取过程失败", error_message)
         finally:
-            driver.quit()
+            # 只有在 driver 被正确初始化后才调用 quit()
+            if driver:
+                driver.quit()
 
         # 检查刷取后的流量信息
         current_remaining_data, current_data_info = check_remaining_data()
