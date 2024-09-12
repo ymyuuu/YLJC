@@ -112,7 +112,6 @@ def run_script():
         if not perform_order(driver):
             return False
 
-        print("流量刷取完成")
         return True
     except Exception as e:
         print(f"执行刷取操作时出错: {e}")
