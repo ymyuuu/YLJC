@@ -24,6 +24,7 @@ def send_notification(title, content):
     url = f"{bark_api_url}{title}/{content}"
     try:
         requests.get(url)
+        print("通知已发送")
     except requests.RequestException as e:
         print(f"发送通知时出错: {e}")
 
@@ -39,11 +40,13 @@ def check_traffic():
             start = data.find("剩余流量：") + 5
             end = data.find("GB", start)
             remaining_traffic = float(data[start:end].strip())
+            print(f"剩余流量: {remaining_traffic} GB")
             return remaining_traffic
         else:
             send_notification("错误", "无法解析流量信息")
             return None
     except Exception as e:
+        print(f"检查流量信息时出错: {e}")
         send_notification("错误", f"检查流量信息时出错: {e}")
         return None
 
@@ -56,6 +59,7 @@ def run_script():
     chrome_options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver.implicitly_wait(10)
 
     try:
         # 访问登录页面
@@ -71,20 +75,17 @@ def run_script():
         # 等待页面加载完成
         time.sleep(5)
 
-        # 访问计划页面
+        # 访问计划页面并点击“下单”按钮
         driver.get(plan_url)
-        time.sleep(5)
-
-        # 点击“下单”按钮
         driver.find_element(By.XPATH, "//button[contains(., 'Order')]").click()
         time.sleep(5)
 
-        # 尝试点击“确定”或“确认取消”按钮
+        # 尝试点击“确认”或“确认取消”按钮
         try:
             confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), 'Confirm') or contains(text(), 'Confirm Cancel')]")
             for button in confirm_buttons:
                 button.click()
-                time.sleep(5)
+                time.sleep(3)
         except NoSuchElementException:
             pass
 
@@ -92,8 +93,10 @@ def run_script():
         driver.find_element(By.XPATH, "//button[contains(., 'Checkout')]").click()
         time.sleep(5)
 
+        print("流量刷取完成")
         return True
     except Exception as e:
+        print(f"执行刷取操作时出错: {e}")
         send_notification("错误", f"执行刷取操作时出错: {e}")
         return False
     finally:
@@ -102,12 +105,15 @@ def run_script():
 # 主流程
 remaining_traffic = check_traffic()
 
-if remaining_traffic is not None and remaining_traffic < 50:
+if remaining_traffic is not None and remaining_traffic < 5:
+    print(f"剩余流量不足 5GB，开始执行刷取...")
     if run_script():
         new_remaining_traffic = check_traffic()
         if new_remaining_traffic > 5:
-            send_notification("刷取成功", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
+            print(f"刷取成功！现在流量: {new_remaining_traffic} GB")
+            send_notification("刷取成功", f"现在流量: {new_remaining_traffic} GB")
         else:
-            send_notification("刷取失败", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
+            print("刷取失败，流量未达到预期值。")
+            send_notification("刷取失败", f"现在流量: {new_remaining_traffic} GB")
 else:
-    print(f"剩余流量: {remaining_traffic} GB，无需刷取。")
+    print(f"剩余流量充足: {remaining_traffic} GB，无需刷取。")
