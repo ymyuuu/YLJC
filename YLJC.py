@@ -1,11 +1,12 @@
-import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import requests
+import time
 
 # 函数：发送Bark通知
 def send_bark_notification(title, content):
+    # 直接将 Bark API 地址写在代码中
     api_url = f"https://api.day.app/Y6wZN8swvDrno2URYa5CDZ/{title}/{content}"
     try:
         response = requests.get(api_url)
@@ -20,7 +21,10 @@ def send_bark_notification(title, content):
 def check_remaining_data():
     print("正在检查流量信息...")
     headers = {"User-Agent": "Loon"}
+    
+    # API地址，直接写在代码中
     url = "https://315d0fe0-47cc-4afb-8d61-e714ee509609.xn--l6qx3lcvp58x.com/api/v1/client/subscribe?token=f03265a6ac38302d8dc247a5af93fb92"
+    
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
@@ -62,19 +66,20 @@ def place_order_and_checkout(driver):
 def main():
     original_remaining_data, original_data_info = check_remaining_data()
 
-    if original_remaining_data is not None and original_remaining_data < 50:
+    if original_remaining_data is not None and original_remaining_data < 5:
         print("剩余流量不足 5G，开始执行刷取...")
 
         try:
+            # 启动无头模式浏览器
             options = webdriver.ChromeOptions()
             options.add_argument('--headless')  # 无头模式
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')  # 禁用 GPU 加速
+            options.add_argument('--no-sandbox')  # 取消沙箱模式
 
             driver = webdriver.Chrome(options=options)
             driver.get("https://xn--l6qx3lcvp58x.com/#/login?redirect=/plan/8")
 
-            # 登录
+            # 登录（在代码中直接提供用户名和密码）
             driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys("ymyuuu@qq.com")
             driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys("ymyuuu@qq.com")
             driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
