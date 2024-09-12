@@ -1,10 +1,9 @@
 name: Run YLJC
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'  # 每半小时触发一次
+  workflow_dispatch:  # 也可以手动触发
 
 jobs:
   run-YLJC:
