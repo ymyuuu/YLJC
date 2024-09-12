@@ -1,6 +1,5 @@
 import os
 import requests
-from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -33,19 +32,8 @@ def check_traffic():
     """检查剩余流量信息"""
     print("正在检查流量信息...")
     try:
-        # 使用 fake_useragent 库生成随机的 macOS User-Agent
-        ua = UserAgent()
-        user_agent = ua.random
-        while "Macintosh" not in user_agent:
-            user_agent = ua.random
-        
-        # 发起请求时使用随机生成的 User-Agent
-        headers = {"User-Agent": Loon}
-        response = requests.get(traffic_api_url, headers=headers)
-        
-        # 输出完整的响应内容
-        print("原始响应内容：", response.text)
-        
+        # 使用 curl 方式请求流量信息
+        response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
         data = response.text
         print("当前剩余流量信息：", data)
         
@@ -64,7 +52,6 @@ def check_traffic():
         send_notification("错误", f"检查流量信息时出错: {e}")
         return None
 
-
 def run_script():
     """执行刷取流量的自动化操作"""
     # 设置 Chrome 无头模式以便在服务器上运行
@@ -72,13 +59,6 @@ def run_script():
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # 使用 fake_useragent 库生成随机的 macOS User-Agent
-    ua = UserAgent()
-    user_agent = ua.random
-    while "Macintosh" not in user_agent:
-        user_agent = ua.random
-    chrome_options.add_argument(f"user-agent={user_agent}")
 
     # 启动 Chrome WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
