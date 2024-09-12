@@ -1,147 +1,112 @@
-import os
-import requests
+import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
-from webdriver_manager.chrome import ChromeDriverManager
-import time
+import requests
 
-# 从环境变量中获取 API URL 和其他敏感信息
-bark_api_key = os.getenv("BARK_API_KEY")
-traffic_api_url = os.getenv("TRAFFIC_API_URL")
-login_url = os.getenv("LOGIN_URL")
-plan_url = os.getenv("PLAN_URL")
-username = os.getenv("USERNAME")
-password = os.getenv("PASSWORD")
-
-# Bark 推送 API 地址
-bark_api_url = f"https://api.day.app/{bark_api_key}/"
-
-def send_notification(title, content):
-    """发送通知到 Bark 应用"""
-    url = f"{bark_api_url}{title}/{content}"
+# 函数：发送Bark通知
+def send_bark_notification(title, content):
+    api_url = f"https://api.day.app/Y6wZN8swvDrno2URYa5CDZ/{title}/{content}"
     try:
-        requests.get(url)
-        print("通知已发送")
-    except requests.RequestException as e:
-        print(f"发送通知时出错: {e}")
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            print("通知已发送。")
+        else:
+            print("发送通知失败。状态码：", response.status_code)
+    except Exception as e:
+        print("发送通知时发生错误：", e)
 
-def check_traffic():
-    """检查剩余流量信息"""
+# 函数：检查流量信息
+def check_remaining_data():
     print("正在检查流量信息...")
+    headers = {"User-Agent": "Loon"}
+    url = "https://315d0fe0-47cc-4afb-8d61-e714ee509609.xn--l6qx3lcvp58x.com/api/v1/client/subscribe?token=f03265a6ac38302d8dc247a5af93fb92"
     try:
-        # 使用 curl 方式请求流量信息
-        response = requests.get(traffic_api_url, headers={"User-Agent": "Loon"})
-        data = response.text
-        print("当前剩余流量信息：", data)
-        
-        # 从返回的文本中提取剩余流量信息
-        if "剩余流量" in data:
-            start = data.find("剩余流量：") + 5
-            end = data.find("GB", start)
-            remaining_traffic = float(data[start:end].strip())
-            return remaining_traffic
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.text
+            remaining_data = float(data.split("剩余流量：")[1].split(" GB")[0])
+            print(f"当前剩余流量：{remaining_data} GB")
+            return remaining_data, data
         else:
-            print("无法解析流量信息")
-            send_notification("错误", "无法解析流量信息")
-            return None
+            error_message = f"无法获取流量信息，状态码：{response.status_code}"
+            print(error_message)
+            send_bark_notification("流量检查失败", error_message)
+            return None, None
     except Exception as e:
-        print(f"检查流量信息时出错: {e}")
-        send_notification("错误", f"检查流量信息时出错: {e}")
-        return None
+        error_message = f"获取流量信息时发生错误：{e}"
+        print(error_message)
+        send_bark_notification("流量检查失败", error_message)
+        return None, None
 
-def run_script():
-    """执行刷取流量的自动化操作"""
-    # 设置 Chrome 无头模式以便在服务器上运行
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # 启动 Chrome WebDriver
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-
+# 函数：点击按钮
+def click_button(driver, xpath):
     try:
-        # 访问登录页面
-        driver.get(login_url)
-
-         # 等待页面加载完成
-        time.sleep(5)
-
-
-        # 输入账号和密码
-        driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys(username)
-        driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys(password)
-
-        # 点击登录按钮
-        driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
-
-        # 等待页面加载完成
-        time.sleep(5)
-
-        # 点击“下单”按钮
-        driver.find_element(By.XPATH, "//button[contains(., '下单')]").click()
-        time.sleep(5)
-
-        # 尝试点击“确定”或“确认取消”按钮
-        try:
-            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), '确定') or contains(text(), '确认取消')]")
-            for button in confirm_buttons:
-                button.click()
-                time.sleep(3)
-                print("已点击按钮：", button.text)
-        except NoSuchElementException:
-            print("未找到任何按钮，跳过此步骤。")
-
-        # 点击“结账”按钮
-        driver.find_element(By.XPATH, "//button[contains(., '结账')]").click()
-        time.sleep(5)
-
-        # 访问新的 URL 进行第二次刷取
-        driver.get(plan_url)
-        time.sleep(5)
-
-        # 重复刷取步骤
-        driver.find_element(By.XPATH, "//button[contains(., '下单')]").click()
-        time.sleep(5)
-
-        # 再次尝试点击“确定”或“确认取消”按钮
-        try:
-            confirm_buttons = driver.find_elements(By.XPATH, "//span[contains(text(), '确定') or contains(text(), '确认取消')]")
-            for button in confirm_buttons:
-                button.click()
-                time.sleep(3)
-                print("已点击按钮：", button.text)
-        except NoSuchElementException:
-            print("未找到任何按钮，跳过此步骤。")
-
-        # 点击“结账”按钮
-        driver.find_element(By.XPATH, "//button[contains(., '结账')]").click()
-        time.sleep(5)
-
-        print("流量刷取完成，重新检查流量信息...")
-        return True
-    except Exception as e:
-        print(f"执行刷取操作时出错: {e}")
-        send_notification("错误", f"执行刷取操作时出错: {e}")
-        return False
-    finally:
-        driver.quit()
-
-# 主流程
-remaining_traffic = check_traffic()
-
-if remaining_traffic is not None and remaining_traffic < 50:
-    print("剩余流量不足 5G，开始执行刷取...")
-    if run_script():
-        new_remaining_traffic = check_traffic()
-        if new_remaining_traffic > 5:
-            print(f"刷取成功！原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
-            send_notification("刷取成功", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
+        button = driver.find_element(By.XPATH, xpath)
+        button.click()
+        time.sleep(3)
+    except (NoSuchElementException, ElementClickInterceptedException) as e:
+        if isinstance(e, ElementClickInterceptedException):
+            driver.execute_script("arguments[0].click();", button)
+            time.sleep(3)
         else:
-            print("刷取失败，流量未达到预期值。")
-            send_notification("刷取失败", f"原流量: {remaining_traffic} GB, 现在流量: {new_remaining_traffic} GB")
-else:
-    print(f"剩余流量充足: {remaining_traffic} GB，无需刷取。")
+            print(f"未找到按钮：{xpath}，跳过此步骤。")
+
+# 函数：执行下单和结账
+def place_order_and_checkout(driver):
+    click_button(driver, "//button[contains(., '下单')]")
+    click_button(driver, "//span[contains(text(), '确定') or contains(text(), '确认取消')]")
+    click_button(driver, "//button[contains(., '结账')]")
+
+# 主函数：刷取流量
+def main():
+    original_remaining_data, original_data_info = check_remaining_data()
+
+    if original_remaining_data is not None and original_remaining_data < 5:
+        print("剩余流量不足 5G，开始执行刷取...")
+
+        try:
+            options = webdriver.ChromeOptions()
+            options.add_argument('--headless')  # 无头模式
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+
+            driver = webdriver.Chrome(options=options)
+            driver.get("https://xn--l6qx3lcvp58x.com/#/login?redirect=/plan/8")
+
+            # 登录
+            driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys("ymyuuu@qq.com")
+            driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys("ymyuuu@qq.com")
+            driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
+            time.sleep(5)
+
+            # 第一次下单和结账
+            place_order_and_checkout(driver)
+
+            # 第二次下单和结账
+            driver.get("https://xn--l6qx3lcvp58x.com/#/plan/9")
+            time.sleep(5)
+            place_order_and_checkout(driver)
+
+        except Exception as e:
+            error_message = f"执行刷取过程时发生错误：{e}"
+            print(error_message)
+            send_bark_notification("刷取过程失败", error_message)
+        finally:
+            driver.quit()
+
+        # 检查刷取后的流量信息
+        current_remaining_data, current_data_info = check_remaining_data()
+
+        # 判断刷取是否成功
+        if current_remaining_data is not None and current_remaining_data > 50:
+            print("刷取成功。")
+            send_bark_notification("刷取成功", f"原始流量：{original_remaining_data} GB，现在流量：{current_remaining_data} GB")
+        else:
+            print("刷取未成功。")
+            send_bark_notification("刷取失败", f"原始流量：{original_remaining_data} GB，现在流量：{current_remaining_data if current_remaining_data else '未获取'}")
+    else:
+        print("流量充足，无需刷取。")
+
+if __name__ == "__main__":
+    main()
