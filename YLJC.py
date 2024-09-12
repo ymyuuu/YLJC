@@ -1,9 +1,6 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import requests
 import time
 
@@ -42,57 +39,18 @@ def check_remaining_data():
         send_bark_notification("流量检查失败", error_message)
         return None, None
 
-# 函数：等待元素
-def wait_for_element(driver, by, value, timeout=10):
-    try:
-        element = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((by, value)))
-        return element
-    except Exception as e:
-        print(f"等待元素 {value} 时发生错误: {e}")
-        return None
-
-# 函数：查找并打印所有输入框
-def find_all_inputs(driver):
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-    inputs = driver.find_elements(By.XPATH, "//input")
-    for i, input_element in enumerate(inputs, start=1):
-        try:
-            placeholder = input_element.get_attribute("placeholder")
-            xpath = driver.execute_script(
-                "function getElementXPath(element) {"
-                "   var paths = [];"
-                "   while (element.nodeType === Node.ELEMENT_NODE) {"
-                "       var index = 0;"
-                "       for (var sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {"
-                "           if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === element.tagName) {"
-                "               index++;"
-                "           }"
-                "       }"
-                "       var tagName = element.tagName.toLowerCase();"
-                "       var path = tagName + (index ? '[' + (index + 1) + ']' : '');"
-                "       paths.unshift(path);"
-                "       element = element.parentNode;"
-                "   }"
-                "   return paths.length ? '/' + paths.join('/') : null;"
-                "}"
-                "return getElementXPath(arguments[0]);", input_element)
-            print(f"输入框 {i}:")
-            print(f"  Placeholder: {placeholder}")
-            print(f"  XPath: {xpath}")
-        except Exception as e:
-            print(f"输入框 {i} 获取信息时发生错误: {e}")
-
 # 函数：点击按钮
 def click_button(driver, xpath):
     try:
-        button = wait_for_element(driver, By.XPATH, xpath)
-        if button:
-            button.click()
+        button = driver.find_element(By.XPATH, xpath)
+        button.click()
+        time.sleep(3)
+    except (NoSuchElementException, ElementClickInterceptedException) as e:
+        if isinstance(e, ElementClickInterceptedException):
+            driver.execute_script("arguments[0].click();", button)
             time.sleep(3)
         else:
             print(f"未找到按钮：{xpath}，跳过此步骤。")
-    except Exception as e:
-        print(f"点击按钮时发生错误：{e}")
 
 # 函数：执行下单和结账
 def place_order_and_checkout(driver):
@@ -104,33 +62,22 @@ def place_order_and_checkout(driver):
 def main():
     original_remaining_data, original_data_info = check_remaining_data()
 
-    if original_remaining_data is not None and original_remaining_data < 55:
+    if original_remaining_data is not None and original_remaining_data < 5:
         print("剩余流量不足 5G，开始执行刷取...")
 
         try:
-            chrome_options = Options()
-            chrome_options.add_argument("--headless")  # 隐藏浏览器窗口
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--no-sandbox")
+            options = webdriver.ChromeOptions()
+            # 设置语言为中文（简体）
+            options.add_argument('--lang=zh-CN')
+            driver = webdriver.Chrome(options=options)
             
-            driver = webdriver.Chrome(options=chrome_options)
             driver.get("https://xn--l6qx3lcvp58x.com/#/login?redirect=/plan/8")
 
-            # 查找并打印所有输入框
-            find_all_inputs(driver)
-
-            # 登录
-            email_input = wait_for_element(driver, By.XPATH, "//input[@placeholder='邮箱']")
-            password_input = wait_for_element(driver, By.XPATH, "//input[@placeholder='密码']")
-            login_button = wait_for_element(driver, By.XPATH, "//button[contains(., '登入')]")
-            
-            if email_input and password_input and login_button:
-                email_input.send_keys("ymyuuu@qq.com")
-                password_input.send_keys("ymyuuu@qq.com")
-                login_button.click()
-                time.sleep(5)
-            else:
-                print("登录元素未找到。")
+            # 登录，直接在代码中写入邮箱和密码
+            driver.find_element(By.XPATH, "//input[@placeholder='邮箱']").send_keys("ymyuuu@qq.com")
+            driver.find_element(By.XPATH, "//input[@placeholder='密码']").send_keys("ymyuuu@qq.com")
+            driver.find_element(By.XPATH, "//button[contains(., '登入')]").click()
+            time.sleep(5)
 
             # 第一次下单和结账
             place_order_and_checkout(driver)
@@ -145,8 +92,7 @@ def main():
             print(error_message)
             send_bark_notification("刷取过程失败", error_message)
         finally:
-            if 'driver' in locals():
-                driver.quit()
+            driver.quit()
 
         # 检查刷取后的流量信息
         current_remaining_data, current_data_info = check_remaining_data()
